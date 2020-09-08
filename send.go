@@ -4,10 +4,24 @@ import (
 	"fmt"
 	"github.com/streadway/amqp"
 	"log"
+	"math/rand"
+	"strconv"
 	"time"
 )
 
-func sender1() {
+func initChannel() *amqp.Channel {
+	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	if err != nil {
+		log.Println(err)
+	}
+	ch, err := conn.Channel()
+	if err != nil {
+		log.Println(err)
+	}
+	return ch
+}
+
+func send2() {
 	// 1. 建立连接
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	if err != nil {
@@ -48,6 +62,61 @@ func sender1() {
 	}
 }
 
+func send3() {
+	ch := initChannel()
+	for i := 1; i <= 5; i++ { // 连续发5个任务
+		ch.Publish(
+			"",
+			"3-sleep",
+			false,
+			false,
+			amqp.Publishing{
+				ContentType: "text/plain",
+				Body:        []byte("sleep 2 " + "序号: " + strconv.Itoa(i)), // 指定睡眠任务执行时间
+			})
+	}
+}
+
+func send5() {
+	ch := initChannel()
+	ch.QueueDeclare(
+		"5-durable",
+		true, // 这里指定队列持久化
+		false,
+		false,
+		false,
+		nil,
+	)
+	for i := 1; i <= 5; i++ {
+		ch.Publish(
+			"",
+			"5-durable",
+			false,
+			false,
+			amqp.Publishing{
+				DeliveryMode: amqp.Persistent, // 这里指定消息持久化
+				ContentType:  "text/plain",
+				Body:         []byte("sleep 2 " + "序号: " + strconv.Itoa(i)),
+			})
+	}
+}
+
+func send6() {
+	ch := initChannel()
+	for i := 1; i <= 10; i++ { // 发10个任务
+		ch.Publish(
+			"",
+			"5-durable",
+			false,
+			false,
+			amqp.Publishing{
+				DeliveryMode: amqp.Persistent,
+				ContentType:  "text/plain",
+				Body:         []byte(fmt.Sprintf("sleep %d 序号: %d", rand.Intn(10), i)), // 随机时间
+			})
+	}
+}
+
 func main() {
-	sender1()
+	send6()
 }
