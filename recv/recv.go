@@ -167,6 +167,37 @@ func recv6() {
 	}
 }
 
+func recv7() {
+	ch := initChannel()
+	q, _ := ch.QueueDeclare( // 声明一个随机名称的队列
+		"",
+		false,
+		false,
+		true, // 注意要设置exclusive
+		false,
+		nil,
+	)
+	ch.QueueBind( // 声明队列的时候没有指定交换器，必须要额外显式地绑定
+		q.Name,
+		"",
+		"logs", // 我们指定的交换器
+		false,
+		nil,
+	)
+	msgs, _ := ch.Consume(
+		q.Name,
+		"",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	for msg := range msgs {
+		log.Println("收到日志：", string(msg.Body))
+	}
+}
+
 func main() {
-	recv6()
+	recv7()
 }

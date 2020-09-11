@@ -117,6 +117,30 @@ func send6() {
 	}
 }
 
+func send7() {
+	ch := initChannel()
+	ch.ExchangeDeclare(
+		"logs",
+		"fanout",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	for range time.Tick(time.Second) { // 每秒发送一条消息
+		ch.Publish(
+			"logs", // 注意这里指定了exchange 并清空了routing-key
+			"",
+			false,
+			false,
+			amqp.Publishing{
+				ContentType: "text/plain",
+				Body:        []byte(fmt.Sprintf("【%s】 一些日志内容……", time.Now().String())),
+			})
+	}
+}
+
 func main() {
-	send6()
+	send7()
 }
