@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/streadway/amqp"
 	"log"
+	"os"
 	"strconv"
 	"time"
 )
@@ -198,6 +199,72 @@ func recv7() {
 	}
 }
 
+func recv8() {
+	ch := initChannel()
+	q, _ := ch.QueueDeclare(
+		"",
+		false,
+		false,
+		true,
+		false,
+		nil,
+	)
+	for _, key := range os.Args[1:] { // 从命令行参数中读取关键字，可以绑定多个关键字
+		ch.QueueBind(
+			q.Name,
+			key,
+			"logs_direct",
+			false,
+			nil,
+		)
+	}
+	msgs, _ := ch.Consume(
+		q.Name,
+		"",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	for msg := range msgs {
+		log.Println("收到日志：", string(msg.Body))
+	}
+}
+
+func recv9() {
+	ch := initChannel()
+	q, _ := ch.QueueDeclare(
+		"",
+		false,
+		false,
+		true,
+		false,
+		nil,
+	)
+	for _, key := range os.Args[1:] { // 从命令行参数中读取关键字，可以绑定多个关键字
+		ch.QueueBind(
+			q.Name,
+			key,
+			"logs_topic",
+			false,
+			nil,
+		)
+	}
+	msgs, _ := ch.Consume(
+		q.Name,
+		"",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	for msg := range msgs {
+		log.Println("收到日志：", string(msg.Body))
+	}
+}
+
 func main() {
-	recv7()
+	recv9()
 }

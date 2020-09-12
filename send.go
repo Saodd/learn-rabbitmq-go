@@ -141,6 +141,63 @@ func send7() {
 	}
 }
 
+func send8() {
+	ch := initChannel()
+	ch.ExchangeDeclare(
+		"logs_direct",
+		"direct", // 改变交换器类型
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	keyMap := map[int]string{0: "black", 1: "green", 2: "orange"}
+	for range time.Tick(time.Second) { // 每秒发送一条消息
+		key := keyMap[rand.Intn(3)] // 随机关键字
+		body := fmt.Sprintf("【%s】 一些日志内容……", time.Now().String())
+		fmt.Println(key, body)
+		ch.Publish(
+			"logs_direct",
+			key,
+			false,
+			false,
+			amqp.Publishing{
+				ContentType: "text/plain",
+				Body:        []byte(body),
+			})
+	}
+}
+
+func send9() {
+	ch := initChannel()
+	ch.ExchangeDeclare(
+		"logs_topic",
+		"topic", // 改变交换器类型
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	facilityMap := map[int]string{0: "server0", 1: "server1", 2: "server2"}
+	severityMap := map[int]string{0: "error", 1: "warning", 2: "info"}
+	for range time.Tick(time.Millisecond * 100) { // 加快速度每0.1秒发送一条消息
+		key := facilityMap[rand.Intn(3)] + "." + severityMap[rand.Intn(3)] // 随机关键字
+		body := fmt.Sprintf("【%s】[%s] 一些日志内容……", time.Now().String(), key)
+		fmt.Println(body)
+		ch.Publish(
+			"logs_topic",
+			key,
+			false,
+			false,
+			amqp.Publishing{
+				ContentType: "text/plain",
+				Body:        []byte(body),
+			})
+	}
+}
+
 func main() {
-	send7()
+	send9()
 }
