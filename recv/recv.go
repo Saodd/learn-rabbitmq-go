@@ -265,6 +265,53 @@ func recv9() {
 	}
 }
 
+func fib(n int) int {
+	if n == 0 {
+		return 0
+	} else if n == 1 {
+		return 1
+	} else {
+		return fib(n-1) + fib(n-2)
+	}
+}
+
+func recv10() {
+	ch := initChannel()
+	q, _ := ch.QueueDeclare( // 在接收端定义这个rpc请求队列，不需要特别的参数
+		"rpc_queue",
+		false,
+		false,
+		false,
+		false,
+		nil,
+	)
+	msgs, _ := ch.Consume(
+		q.Name,
+		"",
+		false, // 不要自动签收
+		false,
+		false,
+		false,
+		nil,
+	)
+	for msg := range msgs {
+		log.Println("收到请求：", string(msg.Body))
+		n, _ := strconv.Atoi(string(msg.Body)) // 忽略异常处理，异常时为0
+		resp := fib(n)
+		ch.Publish( // 把结果发回回调队列
+			"",
+			msg.ReplyTo, // 回调队列
+			false,
+			false,
+			amqp.Publishing{
+				ContentType:   "text/plain",
+				CorrelationId: msg.CorrelationId,
+				Body:          []byte(strconv.Itoa(resp)),
+			})
+		msg.Ack(false) // 不要忘记签收
+	}
+}
+
 func main() {
-	recv9()
+	recv10()
 }

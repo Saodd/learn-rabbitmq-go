@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/streadway/amqp"
 	"log"
 	"math/rand"
+	"os"
 	"strconv"
 	"time"
 )
@@ -198,6 +200,65 @@ func send9() {
 	}
 }
 
+func send10() {
+	ch := initChannel()
+	n, _ := strconv.Atoi(os.Args[1]) // 读取斐波那契函数参数，忽略异常
+	q, _ := ch.QueueDeclare(         // 声明一个回调队列
+		"",
+		false,
+		false,
+		true,
+		false,
+		nil,
+	)
+	msgs, _ := ch.Consume( // 在发送请求之前，先监听回调队列
+		q.Name, // queue
+		"",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	corrId := uuid.New().String() // 生成一个随机id
+	ch.Publish(
+		"",
+		"rpc_queue",
+		false,
+		false,
+		amqp.Publishing{
+			ContentType:   "text/plain",
+			CorrelationId: corrId, // 指定任务id
+			ReplyTo:       q.Name, // 指定回调队列
+			Body:          []byte(strconv.Itoa(n)),
+		})
+	for msg := range msgs { // 处理回调消息
+		if corrId == msg.CorrelationId {
+			log.Println("收到回调：", string(msg.Body))
+			break
+		}
+	}
+}
+
+func send12() {
+	ch := initChannel()
+	confirms := ch.NotifyPublish(make(chan amqp.Confirmation)) // 监听发布确认结果
+	ch.Confirm(false)                                          // 对当前Channel开启监听发布确认
+	for i := 1; i <= 10; i++ {
+		ch.Publish(
+			"",
+			"5-durable",
+			false,
+			false,
+			amqp.Publishing{
+				DeliveryMode: amqp.Persistent,
+				ContentType:  "text/plain",
+				Body:         []byte(fmt.Sprintf("sleep %d 序号: %d", rand.Intn(10), i)),
+			})
+		log.Println("确认一条消息", i, <-confirms)
+	}
+}
+
 func main() {
-	send9()
+	send12()
 }
